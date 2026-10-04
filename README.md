@@ -67,3 +67,32 @@ The likely mechanism is not necessarily an unbounded leak. Instead, N-Nodes may 
 The result is strong but not yet absolute proof.
 
 The cleanest final confirmation would be to restore N-Nodes and repeat the same short A/B test.
+
+___
+## Update 1 — 2026-10-04 — Follow-up Test
+
+# ComfyUI-N-Nodes / VRAM Regression Test
+
+Test system: AMD Radeon RX 9060 XT 16 GB, Windows, ComfyUI 0.37.0, ROCm, DynamicVRAM enabled.
+
+A direct A/B comparison was performed with ComfyUI-N-Nodes enabled and disabled. The node pack was physically moved in and out of `custom_nodes` between launches, and the boot log was checked each time to confirm whether it had actually been loaded.
+
+With N-Nodes enabled, the original problem was reproduced repeatedly. After a few runs, VRAM spill started to occur again and subsequent generations remained heavily degraded.
+
+With N-Nodes disabled, normal Krea2 runs stabilized at approximately 1.66–1.68 s/it. VRAM pressure was then intentionally forced using a higher batch size, and the run was cancelled during the slowdown.
+
+The interrupted spill run reached 22.49 s/it, and the first full recovery run was still slow at 11.04 s/it. This 22.49 s/it value should not be treated as the maximum possible slowdown; earlier observations and reports showed that performance can degrade much further if the spill continues.
+
+The important result was recovery: subsequent runs returned to approximately 1.67–1.68 s/it without restarting ComfyUI.
+
+The same behavior was then checked with SDXL. Performance before the stress test was approximately 3.80–3.82 s/it, and after recovery it returned to approximately 3.82–3.83 s/it.
+
+## Observed result
+
+- **N-Nodes enabled:** the spill/degradation issue returned after a few runs.
+- **N-Nodes disabled:** even after an intentional VRAM spill and cancelled run, ComfyUI recovered to its original performance within the next few runs.
+
+No thermal limitation was observed during testing. GPU temperature was typically around 56–60 °C, with a maximum of approximately 70–72 °C. CPU and motherboard VRM temperatures remained around or below 50 °C.
+
+The current practical workaround is to use a separate IMG/AUDIO launch mode with N-Nodes disabled and a VIDEO launch mode with N-Nodes enabled.
+
